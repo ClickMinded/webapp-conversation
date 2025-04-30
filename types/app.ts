@@ -111,6 +111,7 @@ export type AppInfo = {
   default_language: Locale
   copyright?: string
   privacy_policy?: string
+  disable_session_same_site?: boolean
 }
 
 export enum Resolution {
