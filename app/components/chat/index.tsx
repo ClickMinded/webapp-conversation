@@ -50,7 +50,8 @@ const Chat: FC<IChatProps> = ({
   const { t } = useTranslation()
   const { notify } = Toast
   const isUseInputMethod = useRef(false)
-
+  const showCharacterCount = process.env.NEXT_PUBLIC_SHOW_CHARACTER_COUNT === 'true'
+  const defaultChatPlaceholder = process.env.NEXT_PUBLIC_PLACEHOLDER_CHAT_MESSAGE || ''
   const [query, setQuery] = React.useState('')
   const handleContentChange = (e: any) => {
     const value = e.target.value
@@ -179,10 +180,13 @@ const Chat: FC<IChatProps> = ({
                 onChange={handleContentChange}
                 onKeyUp={handleKeyUp}
                 onKeyDown={handleKeyDown}
+                placeholder={defaultChatPlaceholder}
                 autoSize
               />
               <div className="absolute bottom-2 right-2 flex items-center h-8">
-                <div className={`${s.count} mr-4 h-5 leading-5 text-sm bg-gray-50 text-gray-500`}>{query.trim().length}</div>
+                {showCharacterCount && (
+                  <div className={`${s.count} mr-4 h-5 leading-5 text-sm bg-gray-50 text-gray-500`}>{query.trim().length}</div>
+                )}
                 <Tooltip
                   selector='send-tip'
                   htmlContent={
