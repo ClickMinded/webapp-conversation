@@ -684,7 +684,7 @@ const Main: FC<IMainProps> = () => {
           onCreateNewChat={() => handleConversationIdChange('-1')}
         />
       )}
-      <div className="flex rounded-t-2xl bg-white overflow-hidden">
+      <div className="flex bg-white overflow-hidden">
         {/* sidebar */}
         {showSidebarEnv && !isMobile && renderSidebar()}
         {showSidebarEnv && isMobile && isShowSidebar && (
