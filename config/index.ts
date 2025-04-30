@@ -6,7 +6,7 @@ export const APP_INFO: AppInfo = {
   title: 'ClickMinded',
   description: '',
   copyright: '',
-  privacy_policy: '',
+  privacy_policy: 'https://www.clickminded.com/privacy/',
   default_language: 'en',
 }
 
