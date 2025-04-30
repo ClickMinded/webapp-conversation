@@ -24,7 +24,6 @@ export type IWelcomeProps = {
   canEditInputs: boolean
   savedInputs: Record<string, any>
   onInputsChange: (inputs: Record<string, any>) => void
-  showSidebar?: boolean
 }
 
 const Welcome: FC<IWelcomeProps> = ({
@@ -37,7 +36,6 @@ const Welcome: FC<IWelcomeProps> = ({
   canEditInputs,
   savedInputs,
   onInputsChange,
-  showSidebar,
 }) => {
   // console.log(promptConfig)
   const { t } = useTranslation()
@@ -82,14 +80,6 @@ const Welcome: FC<IWelcomeProps> = ({
   const { notify } = Toast
   const logError = (message: string) => {
     notify({ type: 'error', message, duration: 3000 })
-  }
-
-  const renderHeader = () => {
-    return (
-      <div className='absolute top-0 left-0 right-0 flex items-center justify-between border-b border-gray-100 mobile:h-12 tablet:h-16 px-8 bg-white'>
-        {showSidebar && <div className='text-gray-900'>{conversationName}</div>}
-      </div>
-    )
   }
 
   const renderInputs = () => {
@@ -345,7 +335,6 @@ const Welcome: FC<IWelcomeProps> = ({
 
   return (
     <div className='relative mobile:min-h-[48px] tablet:min-h-[64px]'>
-      {hasSetInputs && renderHeader()}
       <div className='mx-auto pc:w-[794px] max-w-full mobile:w-full px-3.5'>
         {/*  Has't set inputs  */}
         {

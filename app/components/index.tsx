@@ -51,6 +51,8 @@ const Main: FC<IMainProps> = () => {
   })
 
   const showSidebarEnv = process.env.NEXT_PUBLIC_SHOW_SIDEBAR === 'true'
+  const showHeaderEnv = process.env.NEXT_PUBLIC_SHOW_HEADER === 'true'
+  const showWelcomeScreenEnv = process.env.NEXT_PUBLIC_SHOW_WELCOME_SCREEN !== 'false' // Default to true if not set or set to anything other than 'false'
 
   useEffect(() => {
     if (APP_INFO?.title)
@@ -96,10 +98,12 @@ const Main: FC<IMainProps> = () => {
     setChatList(generateNewChatListWithOpenStatement('', inputs))
   }
   const hasSetInputs = (() => {
-    if (!isNewConversation)
-      return true
+    // Original conditions: True if not a new convo OR if chat has started
+    const baseCondition = !isNewConversation || isChatStarted
+    // Additional condition: True if it IS a new convo, we just reset, AND we are skipping the welcome screen
+    const resetSkipWelcomeCondition = isNewConversation && conversationIdChangeBecauseOfNew && !showWelcomeScreenEnv
 
-    return isChatStarted
+    return baseCondition || resetSkipWelcomeCondition
   })()
 
   const conversationName = currConversationInfo?.name || t('app.chat.newChatDefaultName') as string
@@ -163,6 +167,9 @@ const Main: FC<IMainProps> = () => {
     if (id === '-1') {
       createNewChat()
       setConversationIdChangeBecauseOfNew(true)
+      // If welcome screen is skipped, start the chat immediately on reset
+      if (!showWelcomeScreenEnv)
+        handleStartChat({})
     }
     else {
       setConversationIdChangeBecauseOfNew(false)
@@ -211,7 +218,7 @@ const Main: FC<IMainProps> = () => {
       content: calculatedIntroduction,
       isAnswer: true,
       feedbackDisabled: true,
-      isOpeningStatement: isShowPrompt,
+      isOpeningStatement: true,
     }
     if (calculatedIntroduction)
       return [openStatement]
@@ -256,8 +263,12 @@ const Main: FC<IMainProps> = () => {
         })
         setConversationList(conversations as ConversationItem[])
 
-        if (isNotNewConversation)
+        if (isNotNewConversation) {
           setCurrConversationId(_conversationId, APP_ID, false)
+        }
+        else if (!showWelcomeScreenEnv) { // Auto-start chat if welcome screen is skipped and it's a new chat
+          handleStartChat({}) // Start with empty inputs, adjust if defaults are needed
+        }
 
         setInited(true)
       }
@@ -304,6 +315,25 @@ const Main: FC<IMainProps> = () => {
   const [hasStopResponded, setHasStopResponded, getHasStopResponded] = useGetState(false)
   const [isRespondingConIsCurrCon, setIsRespondingConCurrCon, getIsRespondingConIsCurrCon] = useGetState(true)
   const [userQuery, setUserQuery] = useState('')
+
+  // Extracted header rendering logic from Welcome component
+  const renderInternalHeader = () => {
+    // Determine classes based on whether the welcome screen is shown
+    const headerClasses = `
+      ${showWelcomeScreenEnv ? 'absolute' : 'relative mb-5'} 
+      top-0 left-0 right-0 flex items-center justify-between 
+      border-b border-gray-100 mobile:h-12 tablet:h-16 px-8 bg-white
+    `
+
+    return (
+      <div className={headerClasses}>
+        {/* showSidebarEnv controls visibility of the sidebar itself,
+            but this header part specifically showed conversation name when sidebar was visible.
+            Replicating that conditional logic here. */}
+        {showSidebarEnv && <div className='text-gray-900'>{conversationName}</div>}
+      </div>
+    )
+  }
 
   const updateCurrentQA = ({
     responseItem,
@@ -646,12 +676,14 @@ const Main: FC<IMainProps> = () => {
 
   return (
     <div className='bg-gray-100'>
-      <Header
-        title={APP_INFO.title}
-        isMobile={isMobile}
-        onShowSideBar={showSidebar}
-        onCreateNewChat={() => handleConversationIdChange('-1')}
-      />
+      {showHeaderEnv && (
+        <Header
+          title={APP_INFO.title}
+          isMobile={isMobile}
+          onShowSideBar={showSidebar}
+          onCreateNewChat={() => handleConversationIdChange('-1')}
+        />
+      )}
       <div className="flex rounded-t-2xl bg-white overflow-hidden">
         {/* sidebar */}
         {showSidebarEnv && !isMobile && renderSidebar()}
@@ -676,19 +708,25 @@ const Main: FC<IMainProps> = () => {
               <ArrowPathIcon className="h-4 w-4 text-gray-500" />
             </div>
           )}
-          <ConfigSence
-            conversationName={conversationName}
-            hasSetInputs={hasSetInputs}
-            isPublicVersion={isShowPrompt}
-            siteInfo={APP_INFO}
-            promptConfig={promptConfig}
-            onStartChat={handleStartChat}
-            canEditInputs={canEditInputs}
-            savedInputs={currInputs as Record<string, any>}
-            onInputsChange={setCurrInputs}
-            showSidebarEnv={showSidebarEnv}
-          ></ConfigSence>
+          {/* Conditionally render Welcome/ConfigSence screen */}
+          {showWelcomeScreenEnv && (
+            <ConfigSence
+              conversationName={conversationName}
+              hasSetInputs={hasSetInputs}
+              isPublicVersion={isShowPrompt}
+              siteInfo={APP_INFO}
+              promptConfig={promptConfig}
+              onStartChat={handleStartChat}
+              canEditInputs={canEditInputs}
+              savedInputs={currInputs as Record<string, any>}
+              onInputsChange={setCurrInputs}
+            />
+          )}
 
+          {/* Render internal header conditionally, outside of Welcome/ConfigSence */}
+          {hasSetInputs && renderInternalHeader()}
+
+          {/* Always render chat UI container, but content depends on hasSetInputs */}
           {
             hasSetInputs && (
               <div className='relative grow h-[200px] pc:w-[794px] max-w-full mobile:w-full pb-[66px] mx-auto mb-3.5 overflow-hidden'>
