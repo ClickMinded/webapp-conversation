@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import produce, { setAutoFreeze } from 'immer'
 import { useBoolean, useGetState } from 'ahooks'
+import { ArrowPathIcon } from '@heroicons/react/24/outline'
 import useConversation from '@/hooks/use-conversation'
 import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
@@ -48,6 +49,8 @@ const Main: FC<IMainProps> = () => {
     detail: Resolution.low,
     transfer_methods: [TransferMethod.local_file],
   })
+
+  const showSidebarEnv = process.env.NEXT_PUBLIC_SHOW_SIDEBAR === 'true'
 
   useEffect(() => {
     if (APP_INFO?.title)
@@ -623,7 +626,7 @@ const Main: FC<IMainProps> = () => {
   }
 
   const renderSidebar = () => {
-    if (!APP_ID || !APP_INFO || !promptConfig)
+    if (!APP_ID || !APP_INFO || !promptConfig || !showSidebarEnv)
       return null
     return (
       <Sidebar
@@ -651,8 +654,8 @@ const Main: FC<IMainProps> = () => {
       />
       <div className="flex rounded-t-2xl bg-white overflow-hidden">
         {/* sidebar */}
-        {!isMobile && renderSidebar()}
-        {isMobile && isShowSidebar && (
+        {showSidebarEnv && !isMobile && renderSidebar()}
+        {showSidebarEnv && isMobile && isShowSidebar && (
           <div className='fixed inset-0 z-50'
             style={{ backgroundColor: 'rgba(35, 56, 118, 0.2)' }}
             onClick={hideSidebar}
@@ -664,6 +667,15 @@ const Main: FC<IMainProps> = () => {
         )}
         {/* main */}
         <div className='flex-grow flex flex-col h-[calc(100vh_-_3rem)] overflow-y-auto'>
+          {!showSidebarEnv && (
+            <div
+              className='absolute top-3 left-3 z-10 flex items-center justify-center h-8 w-8 cursor-pointer bg-white rounded-md shadow-md'
+              onClick={() => handleConversationIdChange('-1')}
+              title={t('app.chat.resetChat') || 'Reset Chat'}
+            >
+              <ArrowPathIcon className="h-4 w-4 text-gray-500" />
+            </div>
+          )}
           <ConfigSence
             conversationName={conversationName}
             hasSetInputs={hasSetInputs}
@@ -674,6 +686,7 @@ const Main: FC<IMainProps> = () => {
             canEditInputs={canEditInputs}
             savedInputs={currInputs as Record<string, any>}
             onInputsChange={setCurrInputs}
+            showSidebarEnv={showSidebarEnv}
           ></ConfigSence>
 
           {
