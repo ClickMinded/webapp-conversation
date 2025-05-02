@@ -701,7 +701,7 @@ const Main: FC<IMainProps> = () => {
         <div className='flex-grow flex flex-col h-[calc(100vh_-_1rem)] overflow-y-auto'>
           {!showSidebarEnv && (
             <div
-              className='absolute top-3 left-3 z-10 flex items-center justify-center h-8 w-8 cursor-pointer bg-white rounded-md shadow-md'
+              className='absolute top-3 left-3 z-10 flex items-center justify-center h-8 w-8 cursor-pointer bg-white rounded-md shadow-md mobile:top-2'
               onClick={() => handleConversationIdChange('-1')}
               title={t('app.chat.resetChat') || 'Reset Chat'}
             >
