@@ -698,7 +698,7 @@ const Main: FC<IMainProps> = () => {
           </div>
         )}
         {/* main */}
-        <div className='flex-grow flex flex-col h-[calc(100vh_-_3rem)] overflow-y-auto'>
+        <div className='flex-grow flex flex-col h-[calc(100vh_-_1rem)] overflow-y-auto'>
           {!showSidebarEnv && (
             <div
               className='absolute top-3 left-3 z-10 flex items-center justify-center h-8 w-8 cursor-pointer bg-white rounded-md shadow-md'
