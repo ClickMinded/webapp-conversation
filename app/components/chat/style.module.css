@@ -96,3 +96,22 @@
 .textArea:focus+div .sendBtn {
   background-image: url(./icons/send-active.svg);
 }
+
+.answerContent {
+  /* Add any base styles for the content bubble if needed */
+  overflow-wrap: break-word;
+  /* Helps prevent long strings from overflowing */
+  word-break: break-word;
+  /* Legacy support */
+}
+
+.workflowMinWidth {
+  min-width: 480px;
+}
+
+/* --- Add Media Query for Mobile --- */
+@media (max-width: 767px) {
+  .workflowMinWidth {
+    min-width: unset;
+  }
+}
