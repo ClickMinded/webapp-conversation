@@ -1,6 +1,13 @@
 .answerIcon {
   position: relative;
-  background: url(./icons/robot.svg);
+  background: url(./icons/clickminded-cursor.png);
+  background-size: 50% 50%;
+  background-repeat: no-repeat;
+  background-position: center;
+  width: 40px;
+  height: 40px;
+  background-color: #f0f0f0;
+  border-radius: 50%;
 }
 
 .typeingIcon {
