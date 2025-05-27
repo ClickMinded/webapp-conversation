@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import produce, { setAutoFreeze } from 'immer'
 import { useBoolean, useGetState } from 'ahooks'
 import { ArrowPathIcon } from '@heroicons/react/24/outline'
+import * as Sentry from '@sentry/nextjs'
 import useConversation from '@/hooks/use-conversation'
 import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
@@ -475,8 +476,19 @@ const Main: FC<IMainProps> = () => {
         })
       },
       async onCompleted(hasError?: boolean) {
-        if (hasError)
+        if (hasError) {
+          // Sentry integration for this specific case
+          Sentry.captureMessage('Chatbot freeze condition: onCompleted called with hasError=true', {
+            level: 'error',
+            extra: {
+              conversationId: getCurrConversationId() || 'N/A',
+              appId: APP_ID,
+              // Consider adding other relevant context if available and not sensitive,
+              // for example, parts of the userQuery or relevant state.
+            },
+          })
           return
+        }
 
         if (getConversationIdChangeBecauseOfNew()) {
           const { data: allConversations }: any = await fetchConversations()
