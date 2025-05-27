@@ -483,8 +483,8 @@ const Main: FC<IMainProps> = () => {
             extra: {
               conversationId: getCurrConversationId() || 'N/A',
               appId: APP_ID,
-              // Consider adding other relevant context if available and not sensitive,
-              // for example, parts of the userQuery or relevant state.
+              userQuery: message, // The actual query sent by the user
+              currentInputs: currInputs, // Inputs from the form
             },
           })
           return
