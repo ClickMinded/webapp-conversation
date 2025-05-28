@@ -483,8 +483,9 @@ const Main: FC<IMainProps> = () => {
             extra: {
               conversationId: getCurrConversationId() || 'N/A',
               appId: APP_ID,
-              userQuery: message, // The actual query sent by the user
-              currentInputs: currInputs, // Inputs from the form
+              userQuery: message,
+              currentInputs: currInputs,
+              visionFilesCount: files?.length || 0,
             },
           })
           return
@@ -492,17 +493,31 @@ const Main: FC<IMainProps> = () => {
 
         if (getConversationIdChangeBecauseOfNew()) {
           const { data: allConversations }: any = await fetchConversations()
-          const newItem: any = await generationConversationName(allConversations[0].id)
+          // Check if allConversations is not empty and has at least one item
+          if (allConversations && allConversations.length > 0 && allConversations[0]) {
+            const newItem: any = await generationConversationName(allConversations[0].id)
 
-          const newAllConversations = produce(allConversations, (draft: any) => {
-            draft[0].name = newItem.name
-          })
-          setConversationList(newAllConversations as any)
+            const newAllConversations = produce(allConversations, (draft: any) => {
+              // Ensure draft[0] also exists, though the above check should cover it for `name` setting
+              if (draft && draft.length > 0 && draft[0])
+                draft[0].name = newItem.name
+            })
+            setConversationList(newAllConversations as any)
+          }
+          else {
+            // Handle the case where there are no conversations, perhaps log it or decide if it's an error state
+            console.warn('onCompleted: No conversations found after fetchConversations in new conversation flow.')
+            // Optionally, you could capture this with Sentry as well if it's unexpected
+            Sentry.captureMessage('onCompleted: No conversations found', { level: 'warning', extra: { conversationId: getCurrConversationId() } })
+          }
         }
         setConversationIdChangeBecauseOfNew(false)
         resetNewConversationInputs()
         setChatNotStarted()
-        setCurrConversationId(tempNewConversationId, APP_ID, true)
+        // tempNewConversationId is set in onData, ensure it's valid before using
+        if (tempNewConversationId)
+          setCurrConversationId(tempNewConversationId, APP_ID, true)
+
         setRespondingFalse()
       },
       onFile(file) {
