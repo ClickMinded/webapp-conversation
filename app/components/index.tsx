@@ -68,6 +68,13 @@ const Main: FC<IMainProps> = () => {
     }
   }, [])
 
+  // Sentry Test Error
+  useEffect(() => {
+    console.log('Sentry test: Attempting to call myUndefinedFunction')
+    // @ts-expect-error Sentry test: Intentionally calling an undefined function
+    myUndefinedFunction()
+  }, [])
+
   /*
   * conversation info
   */
