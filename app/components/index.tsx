@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-use-before-define */
 'use client'
 import type { FC } from 'react'
 import React, { useEffect, useRef, useState } from 'react'
@@ -14,6 +13,7 @@ import ConfigSence from '@/app/components/config-scence'
 import Header from '@/app/components/header'
 import { fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, updateFeedback } from '@/service'
 import type { ChatItem, ConversationItem, Feedbacktype, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
+import type { FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
 import { Resolution, TransferMethod, WorkflowRunningStatus } from '@/types/app'
 import Chat from '@/app/components/chat'
 import { setLocaleOnClient } from '@/i18n/client'
@@ -25,7 +25,7 @@ import { API_KEY, APP_ID, APP_INFO, isShowPrompt, promptTemplate } from '@/confi
 import type { Annotation as AnnotationType } from '@/types/log'
 import { addFileInfos, sortAgentSorts } from '@/utils/tools'
 
-export type IMainProps = {
+export interface IMainProps {
   params: any
 }
 
@@ -50,14 +50,14 @@ const Main: FC<IMainProps> = () => {
     detail: Resolution.low,
     transfer_methods: [TransferMethod.local_file],
   })
+  const [fileConfig, setFileConfig] = useState<FileUpload | undefined>()
 
   const showSidebarEnv = process.env.NEXT_PUBLIC_SHOW_SIDEBAR === 'true'
   const showHeaderEnv = process.env.NEXT_PUBLIC_SHOW_HEADER === 'true'
   const showWelcomeScreenEnv = process.env.NEXT_PUBLIC_SHOW_WELCOME_SCREEN !== 'false' // Default to true if not set or set to anything other than 'false'
 
   useEffect(() => {
-    if (APP_INFO?.title)
-      document.title = `${APP_INFO.title} - Powered by Dify`
+    if (APP_INFO?.title) { document.title = `${APP_INFO.title} - Powered by Dify` }
   }, [APP_INFO?.title])
 
   // onData change thought (the produce obj). https://github.com/immerjs/immer/issues/576
@@ -109,10 +109,10 @@ const Main: FC<IMainProps> = () => {
 
   const conversationName = currConversationInfo?.name || t('app.chat.newChatDefaultName') as string
   const conversationIntroduction = currConversationInfo?.introduction || ''
+  const suggestedQuestions = currConversationInfo?.suggested_questions || []
 
   const handleConversationSwitch = () => {
-    if (!inited)
-      return
+    if (!inited) { return }
 
     // update inputs of current conversation
     let notSyncToStateIntroduction = ''
@@ -125,6 +125,7 @@ const Main: FC<IMainProps> = () => {
       setExistConversationInfo({
         name: item?.name || '',
         introduction: notSyncToStateIntroduction,
+        suggested_questions: suggestedQuestions,
       })
     }
     else {
@@ -159,8 +160,7 @@ const Main: FC<IMainProps> = () => {
       })
     }
 
-    if (isNewConversation && isChatStarted)
-      setChatList(generateNewChatListWithOpenStatement())
+    if (isNewConversation && isChatStarted) { setChatList(generateNewChatListWithOpenStatement()) }
   }
   useEffect(handleConversationSwitch, [currConversationId, inited])
 
@@ -186,16 +186,21 @@ const Main: FC<IMainProps> = () => {
   const [chatList, setChatList, getChatList] = useGetState<ChatItem[]>([])
   const chatListDomRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    // scroll to bottom
-    if (chatListDomRef.current)
-      chatListDomRef.current.scrollTop = chatListDomRef.current.scrollHeight
+    // scroll to bottom with page-level scrolling
+    if (chatListDomRef.current) {
+      setTimeout(() => {
+        chatListDomRef.current?.scrollIntoView({
+          behavior: 'auto',
+          block: 'end',
+        })
+      }, 50)
+    }
   }, [chatList, currConversationId])
   // user can not edit inputs if user had send message
   const canEditInputs = !chatList.some(item => item.isAnswer === false) && isNewConversation
   const createNewChat = () => {
     // if new chat is already exist, do not create new chat
-    if (conversationList.some(item => item.id === '-1'))
-      return
+    if (conversationList.some(item => item.id === '-1')) { return }
 
     setConversationList(produce(conversationList, (draft) => {
       draft.unshift({
@@ -203,6 +208,7 @@ const Main: FC<IMainProps> = () => {
         name: t('app.chat.newChatDefaultName'),
         inputs: newConversationInputs,
         introduction: conversationIntroduction,
+        suggested_questions: suggestedQuestions,
       })
     }))
   }
@@ -211,8 +217,7 @@ const Main: FC<IMainProps> = () => {
   const generateNewChatListWithOpenStatement = (introduction?: string, inputs?: Record<string, any> | null) => {
     let calculatedIntroduction = introduction || conversationIntroduction || ''
     const calculatedPromptVariables = inputs || currInputs || null
-    if (calculatedIntroduction && calculatedPromptVariables)
-      calculatedIntroduction = replaceVarWithValues(calculatedIntroduction, promptConfig?.prompt_variables || [], calculatedPromptVariables)
+    if (calculatedIntroduction && calculatedPromptVariables) { calculatedIntroduction = replaceVarWithValues(calculatedIntroduction, promptConfig?.prompt_variables || [], calculatedPromptVariables) }
 
     const openStatement = {
       id: `${Date.now()}`,
@@ -220,9 +225,9 @@ const Main: FC<IMainProps> = () => {
       isAnswer: true,
       feedbackDisabled: true,
       isOpeningStatement: true,
+      suggestedQuestions,
     }
-    if (calculatedIntroduction)
-      return [openStatement]
+    if (calculatedIntroduction) { return [openStatement] }
 
     return []
   }
@@ -237,30 +242,49 @@ const Main: FC<IMainProps> = () => {
       try {
         const [conversationData, appParams] = await Promise.all([fetchConversations(), fetchAppParams()])
         // handle current conversation id
-        const { data: conversations, error } = conversationData as { data: ConversationItem[]; error: string }
+        const { data: conversations, error } = conversationData as { data: ConversationItem[], error: string }
         if (error) {
           Toast.notify({ type: 'error', message: error })
           throw new Error(error)
           return
         }
         const _conversationId = getConversationIdFromStorage(APP_ID)
-        const isNotNewConversation = conversations.some(item => item.id === _conversationId)
+        const currentConversation = conversations.find(item => item.id === _conversationId)
+        const isNotNewConversation = !!currentConversation
 
         // fetch new conversation info
-        const { user_input_form, opening_statement: introduction, file_upload, system_parameters }: any = appParams
+        const { user_input_form, opening_statement: introduction, file_upload, system_parameters, suggested_questions = [] }: any = appParams
         setLocaleOnClient(APP_INFO.default_language, true)
         setNewConversationInfo({
           name: t('app.chat.newChatDefaultName'),
           introduction,
+          suggested_questions,
         })
+        if (isNotNewConversation) {
+          setExistConversationInfo({
+            name: currentConversation.name || t('app.chat.newChatDefaultName'),
+            introduction,
+            suggested_questions,
+          })
+        }
         const prompt_variables = userInputsFormToPromptVariables(user_input_form)
         setPromptConfig({
           prompt_template: promptTemplate,
           prompt_variables,
         } as PromptConfig)
+        const outerFileUploadEnabled = !!file_upload?.enabled
         setVisionConfig({
           ...file_upload?.image,
+          enabled: !!(outerFileUploadEnabled && file_upload?.image?.enabled),
           image_file_size_limit: system_parameters?.system_parameters || 0,
+        })
+        setFileConfig({
+          enabled: outerFileUploadEnabled,
+          allowed_file_types: file_upload?.allowed_file_types,
+          allowed_file_extensions: file_upload?.allowed_file_extensions,
+          allowed_file_upload_methods: file_upload?.allowed_file_upload_methods,
+          number_limits: file_upload?.number_limits,
+          fileUploadConfig: file_upload?.fileUploadConfig,
         })
         setConversationList(conversations as ConversationItem[])
 
@@ -293,11 +317,9 @@ const Main: FC<IMainProps> = () => {
   }
 
   const checkCanSend = () => {
-    if (currConversationId !== '-1')
-      return true
+    if (currConversationId !== '-1') { return true }
 
-    if (!currInputs || !promptConfig?.prompt_variables)
-      return true
+    if (!currInputs || !promptConfig?.prompt_variables) { return true }
 
     const inputLens = Object.values(currInputs).length
     const promptVariablesLens = promptConfig.prompt_variables.length
@@ -351,11 +373,11 @@ const Main: FC<IMainProps> = () => {
     const newListWithAnswer = produce(
       getChatList().filter(item => item.id !== responseItem.id && item.id !== placeholderAnswerId),
       (draft) => {
-        if (!draft.find(item => item.id === questionId))
-          draft.push({ ...questionItem })
+        if (!draft.find(item => item.id === questionId)) { draft.push({ ...questionItem }) }
 
         draft.push({ ...responseItem })
-      })
+      },
+    )
     setChatList(newListWithAnswer)
   }
 
@@ -377,14 +399,11 @@ const Main: FC<IMainProps> = () => {
     if (currInputs) {
       Object.keys(currInputs).forEach((key) => {
         const value = currInputs[key]
-        if (value.supportFileType)
-          toServerInputs[key] = transformToServerFile(value)
+        if (value.supportFileType) { toServerInputs[key] = transformToServerFile(value) }
 
-        else if (value[0]?.supportFileType)
-          toServerInputs[key] = value.map((item: any) => transformToServerFile(item))
+        else if (value[0]?.supportFileType) { toServerInputs[key] = value.map((item: any) => transformToServerFile(item)) }
 
-        else
-          toServerInputs[key] = value
+        else { toServerInputs[key] = value }
       })
     }
 
@@ -394,7 +413,7 @@ const Main: FC<IMainProps> = () => {
       conversation_id: isNewConversation ? null : currConversationId,
     }
 
-    if (visionConfig?.enabled && files && files?.length > 0) {
+    if (files && files?.length > 0) {
       data.files = files.map((item) => {
         if (item.transfer_method === TransferMethod.local_file) {
           return {
@@ -412,7 +431,7 @@ const Main: FC<IMainProps> = () => {
       id: questionId,
       content: message,
       isAnswer: false,
-      message_files: files,
+      message_files: (files || []).filter((f: any) => f.type === 'image'),
     }
 
     const placeholderAnswerId = `answer-placeholder-${Date.now()}`
@@ -451,16 +470,14 @@ const Main: FC<IMainProps> = () => {
         }
         else {
           const lastThought = responseItem.agent_thoughts?.[responseItem.agent_thoughts?.length - 1]
-          if (lastThought)
-            lastThought.thought = lastThought.thought + message // need immer setAutoFreeze
+          if (lastThought) { lastThought.thought = lastThought.thought + message } // need immer setAutoFreeze
         }
         if (messageId && !hasSetResponseId) {
           responseItem.id = messageId
           hasSetResponseId = true
         }
 
-        if (isFirstMessage && newConversationId)
-          tempNewConversationId = newConversationId
+        if (isFirstMessage && newConversationId) { tempNewConversationId = newConversationId }
 
         setMessageTaskId(taskId)
         // has switched to other conversation
@@ -522,8 +539,7 @@ const Main: FC<IMainProps> = () => {
       },
       onFile(file) {
         const lastThought = responseItem.agent_thoughts?.[responseItem.agent_thoughts?.length - 1]
-        if (lastThought)
-          lastThought.message_files = [...(lastThought as any).message_files, { ...file }]
+        if (lastThought) { lastThought.message_files = [...(lastThought as any).message_files, { ...file }] }
 
         updateCurrentQA({
           responseItem,
@@ -578,13 +594,13 @@ const Main: FC<IMainProps> = () => {
           const newListWithAnswer = produce(
             getChatList().filter(item => item.id !== responseItem.id && item.id !== placeholderAnswerId),
             (draft) => {
-              if (!draft.find(item => item.id === questionId))
-                draft.push({ ...questionItem })
+              if (!draft.find(item => item.id === questionId)) { draft.push({ ...questionItem }) }
 
               draft.push({
                 ...responseItem,
               })
-            })
+            },
+          )
           setChatList(newListWithAnswer)
           return
         }
@@ -593,11 +609,11 @@ const Main: FC<IMainProps> = () => {
         const newListWithAnswer = produce(
           getChatList().filter(item => item.id !== responseItem.id && item.id !== placeholderAnswerId),
           (draft) => {
-            if (!draft.find(item => item.id === questionId))
-              draft.push({ ...questionItem })
+            if (!draft.find(item => item.id === questionId)) { draft.push({ ...questionItem }) }
 
             draft.push({ ...responseItem })
-          })
+          },
+        )
         setChatList(newListWithAnswer)
       },
       onMessageReplace: (messageReplace) => {
@@ -606,8 +622,7 @@ const Main: FC<IMainProps> = () => {
           (draft) => {
             const current = draft.find(item => item.id === messageReplace.id)
 
-            if (current)
-              current.content = messageReplace.answer
+            if (current) { current.content = messageReplace.answer }
           },
         ))
       },
@@ -695,11 +710,9 @@ const Main: FC<IMainProps> = () => {
     )
   }
 
-  if (appUnavailable)
-    return <AppUnavailable isUnknownReason={isUnknownReason} errMessage={!hasSetAppConfig ? 'Please set APP_ID and API_KEY in config/index.tsx' : ''} />
+  if (appUnavailable) { return <AppUnavailable isUnknownReason={isUnknownReason} errMessage={!hasSetAppConfig ? 'Please set APP_ID and API_KEY in config/index.tsx' : ''} /> }
 
-  if (!APP_ID || !APP_INFO || !promptConfig)
-    return <Loading type='app' />
+  if (!APP_ID || !APP_INFO || !promptConfig) { return <Loading type='app' /> }
 
   return (
     <div className='bg-gray-100'>
@@ -756,17 +769,16 @@ const Main: FC<IMainProps> = () => {
           {/* Always render chat UI container, but content depends on hasSetInputs */}
           {
             hasSetInputs && (
-              <div className='relative grow h-[200px] pc:w-[794px] max-w-full mobile:w-full pb-[66px] mx-auto mb-3.5 overflow-hidden'>
-                <div className='h-full overflow-y-auto' ref={chatListDomRef}>
-                  <Chat
-                    chatList={chatList}
-                    onSend={handleSend}
-                    onFeedback={handleFeedback}
-                    isResponding={isResponding}
-                    checkCanSend={checkCanSend}
-                    visionConfig={visionConfig}
-                  />
-                </div>
+              <div className='relative grow pc:w-[794px] max-w-full mobile:w-full pb-[180px] mx-auto mb-3.5' ref={chatListDomRef}>
+                <Chat
+                  chatList={chatList}
+                  onSend={handleSend}
+                  onFeedback={handleFeedback}
+                  isResponding={isResponding}
+                  checkCanSend={checkCanSend}
+                  visionConfig={visionConfig}
+                  fileConfig={fileConfig}
+                />
               </div>)
           }
         </div>
