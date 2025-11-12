@@ -9,7 +9,7 @@ interface StreamdownMarkdownProps {
 
 export function StreamdownMarkdown({ content, className = '' }: StreamdownMarkdownProps) {
   return (
-    <div className={`streamdown-markdown ${className}`}>
+    <div className={`markdown-body ${className}`}>
       <Streamdown>{content}</Streamdown>
     </div>
   )

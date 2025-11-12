@@ -128,3 +128,25 @@ a {
   background-clip: text;
   text-fill-color: transparent;
 }
+
+/* Override markdown spacing for Streamdown to match production */
+/* Streamdown wraps list content in <p> tags, which triggers excessive spacing */
+/* These overrides neutralize that while keeping bold text and link styles */
+.markdown-body ul,
+.markdown-body ol {
+  margin-bottom: 0 !important;
+}
+
+.markdown-body li > p {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  display: inline;
+}
+
+.markdown-body li + li {
+  margin-top: 0.25em !important;
+}
+
+.markdown-body p {
+  margin-bottom: 0 !important;
+}
